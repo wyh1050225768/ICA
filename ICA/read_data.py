@@ -82,7 +82,7 @@ courseAndTrainer=forms.getFormRelation(forms.formDict["课程信息"],forms.form
 
 
 
-
+#查找空闲时间 返回一个空闲时间的列表
 def findFreeTime(List):
     MaxTime=1000000
     freeTime=list()
@@ -93,6 +93,7 @@ def findFreeTime(List):
     freeTime.append((List[-1][1],MaxTime))
     return freeTime
 
+#获取两个时间集的交集，为了找到训练师和教师同时空闲时间
 def getIntersection(set1,set2):
     if set1[0]<=set2[0] and set1[1]>=set2[1]:
         return set2
@@ -108,36 +109,37 @@ def getIntersection(set1,set2):
 # test=[(0,1),(3,4),(1,2),(8,9),(5,8)]
 # print(findFreeTime(test))
 
-#一次迭代效果
+
 courseIdList=b["course_id"].tolist()
 
 trainerFree=defaultdict(list)
 classroomFree=defaultdict(list)
 diedai_time=time.time()
+#一次迭代效果
 for i in range(len(courseIdList)):
     randomCourse=random.choice(courseIdList) #随机获取课程
     randomTrainer=random.choice(courseAndTrainer.get(randomCourse))#随机获取课程对应培训师
     randomClassroom=random.choice(courseAndClassroom.get(randomCourse))#随机获取课程对应教室
     courseDuration=int(b[b["course_id"]==randomCourse]["ceiling(course_days / 0.5) * 0.5"].values[0])#获取课程时长
 
-    if  trainerFree.get(randomTrainer)==None and  classroomFree.get(randomClassroom)==None:
+    if  trainerFree.get(randomTrainer)==None and  classroomFree.get(randomClassroom)==None: #教师和教室都还未安排过任务时 从0直接安排
         trainerFree[randomTrainer].append((0,courseDuration))
         classroomFree[randomClassroom].append((0,courseDuration))
 
-    elif  trainerFree.get(randomTrainer)!=None and  classroomFree.get(randomClassroom)==None:
+    elif  trainerFree.get(randomTrainer)!=None and  classroomFree.get(randomClassroom)==None:# 教师安排过任务，教室没安排过 只检验教师的空闲时间
         for i in findFreeTime(trainerFree.get(randomTrainer)):
             if i[1]-i[0]>= courseDuration:
                 trainerFree[randomTrainer].append((i[0], i[0]+courseDuration))
                 classroomFree[randomClassroom].append((i[0], i[0]+courseDuration))
 
 
-    elif  trainerFree.get(randomTrainer)==None and  classroomFree.get(randomClassroom)!=None:
+    elif  trainerFree.get(randomTrainer)==None and  classroomFree.get(randomClassroom)!=None:# 教室安排过任务，教师没安排过 只检验教室的空闲时间
         for i in findFreeTime(classroomFree.get(randomClassroom)):
             if i[1]-i[0]>= courseDuration:
                 trainerFree[randomTrainer].append((i[0], i[0]+courseDuration))
                 classroomFree[randomClassroom].append((i[0], i[0]+courseDuration))
 
-    elif  trainerFree.get(randomTrainer)!=None and  classroomFree.get(randomClassroom)!=None:
+    elif  trainerFree.get(randomTrainer)!=None and  classroomFree.get(randomClassroom)!=None:#都有任务 对共同空闲时间校验
         break_flag=False
         for i in findFreeTime(classroomFree.get(randomClassroom)):
             for j in findFreeTime(trainerFree.get(randomTrainer)):
